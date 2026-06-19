@@ -545,7 +545,11 @@ function getMonday(d) {
 }
 
 function toDateStr(d) {
-  return d.toISOString().split('T')[0];
+  // Use local date parts to avoid UTC offset shifting the date (e.g. Perth UTC+8)
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + day;
 }
 
 function formatDate(str) {
