@@ -1,0 +1,812 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Palm Crest Timesheet</title>
+<style>
+  :root {
+    --navy: #0b1c33;
+    --gold: #c19c4b;
+    --gold-light: #d4b36a;
+    --white: #ffffff;
+    --offwhite: #f5f5f2;
+    --mid: #8a9ab0;
+    --border: #dde2ea;
+    --danger: #c0392b;
+    --success: #1e7e4a;
+    --font: 'Calibri Light', Calibri, 'Segoe UI', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font);
+    background: var(--offwhite);
+    color: var(--navy);
+    min-height: 100vh;
+  }
+
+  header {
+    background: var(--navy);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  header .brand {
+    color: var(--white);
+    font-size: 1.15rem;
+    font-weight: 300;
+    letter-spacing: 0.04em;
+  }
+
+  header .brand span {
+    color: var(--gold);
+    font-weight: 600;
+  }
+
+  header nav a {
+    color: var(--mid);
+    text-decoration: none;
+    font-size: 0.85rem;
+    margin-left: 20px;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+
+  header nav a:hover, header nav a.active { color: var(--gold); }
+
+  .container {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 36px 20px 60px;
+  }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  h2 {
+    font-size: 1.4rem;
+    font-weight: 300;
+    color: var(--navy);
+    margin-bottom: 6px;
+    letter-spacing: 0.02em;
+  }
+
+  .subtitle {
+    font-size: 0.85rem;
+    color: var(--mid);
+    margin-bottom: 28px;
+  }
+
+  .card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 28px;
+    margin-bottom: 20px;
+  }
+
+  .card-title {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 18px;
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .row.triple { grid-template-columns: 1fr 1fr 1fr; }
+  .row.full { grid-template-columns: 1fr; }
+
+  label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--mid);
+    margin-bottom: 6px;
+  }
+
+  input[type="text"],
+  input[type="date"],
+  input[type="time"],
+  input[type="email"],
+  select {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px 12px;
+    font-family: var(--font);
+    font-size: 0.95rem;
+    color: var(--navy);
+    background: var(--white);
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+
+  input:focus, select:focus {
+    outline: none;
+    border-color: var(--gold);
+  }
+
+  /* Days table */
+  .days-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+
+  .days-table th {
+    text-align: left;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--mid);
+    padding: 0 8px 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .days-table td {
+    padding: 8px 8px 8px 0;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+
+  .days-table td:first-child {
+    font-weight: 600;
+    width: 100px;
+    color: var(--navy);
+    font-size: 0.85rem;
+  }
+
+  .days-table input[type="time"] {
+    padding: 7px 10px;
+    font-size: 0.88rem;
+  }
+
+  .days-table input[type="text"].break-input {
+    padding: 7px 10px;
+    font-size: 0.88rem;
+    width: 70px;
+  }
+
+  .hours-cell {
+    font-weight: 600;
+    color: var(--gold);
+    min-width: 52px;
+    font-size: 0.9rem;
+  }
+
+  .day-off-check {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: var(--mid);
+  }
+
+  .day-off-check input { width: auto; }
+
+  .total-row {
+    background: var(--offwhite);
+    border-radius: 4px;
+  }
+
+  .total-row td {
+    padding: 12px 8px 12px 0;
+    border-bottom: none;
+    font-weight: 600;
+  }
+
+  .total-hours {
+    font-size: 1.1rem;
+    color: var(--navy);
+  }
+
+  /* Signature */
+  .sig-block {
+    background: var(--offwhite);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 20px;
+    margin-top: 4px;
+  }
+
+  .sig-block p {
+    font-size: 0.82rem;
+    color: var(--mid);
+    margin-bottom: 12px;
+    line-height: 1.5;
+  }
+
+  /* Buttons */
+  .btn {
+    display: inline-block;
+    padding: 12px 28px;
+    border-radius: 4px;
+    font-family: var(--font);
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    border: none;
+    transition: background 0.2s, color 0.2s;
+  }
+
+  .btn-primary {
+    background: var(--gold);
+    color: var(--white);
+  }
+  .btn-primary:hover { background: var(--gold-light); }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--navy);
+    border: 1px solid var(--border);
+  }
+  .btn-outline:hover { border-color: var(--navy); }
+
+  .btn-danger {
+    background: transparent;
+    color: var(--danger);
+    border: 1px solid var(--danger);
+    font-size: 0.8rem;
+    padding: 8px 16px;
+  }
+
+  .actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 24px;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--navy);
+    color: var(--white);
+    padding: 12px 28px;
+    border-radius: 4px;
+    font-size: 0.88rem;
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 100;
+  }
+  .toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+  .toast.success { border-left: 3px solid var(--gold); }
+  .toast.error { border-left: 3px solid var(--danger); }
+
+  /* Admin page */
+  .filter-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+
+  .filter-row > div { flex: 1; min-width: 160px; }
+
+  .records-list { margin-top: 8px; }
+
+  .record-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 20px 24px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .record-info { flex: 1; }
+  .record-info strong { display: block; font-size: 1rem; color: var(--navy); }
+  .record-info span { font-size: 0.8rem; color: var(--mid); }
+
+  .record-hours {
+    font-size: 1.5rem;
+    font-weight: 300;
+    color: var(--gold);
+    min-width: 70px;
+    text-align: right;
+  }
+
+  .record-hours small { display: block; font-size: 0.7rem; color: var(--mid); text-align: right; }
+
+  .empty-state {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--mid);
+    font-size: 0.9rem;
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Admin config note */
+  .config-note {
+    background: #fff8e6;
+    border: 1px solid #f0d080;
+    border-radius: 4px;
+    padding: 14px 18px;
+    font-size: 0.82rem;
+    color: #7a6010;
+    margin-bottom: 24px;
+    line-height: 1.6;
+  }
+
+  .config-note code {
+    background: #f0e8c8;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 0.8rem;
+  }
+
+  @media (max-width: 560px) {
+    .row { grid-template-columns: 1fr; }
+    .row.triple { grid-template-columns: 1fr 1fr; }
+    .days-table th:nth-child(3),
+    .days-table td:nth-child(3) { display: none; }
+    header { padding: 14px 16px; }
+    .container { padding: 24px 14px 48px; }
+    .card { padding: 20px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- CONFIG: update this URL after deploying GAS -->
+<script>
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbze2FGvqJ4YQUM2pDPrqiOCF19mkRtIDIyopMn6urz_BY80jbagrB0V_Jz9EVD3hz9sdA/exec';
+  const ADMIN_PIN = '1234'; // change this
+</script>
+
+<header>
+  <div class="brand">Palm Crest <span>Scheduling Solutions</span></div>
+  <nav>
+    <a onclick="showPage('employee')" id="nav-employee" class="active">Timesheet</a>
+    <a onclick="adminAccess()" id="nav-admin">Admin</a>
+  </nav>
+</header>
+
+<!-- EMPLOYEE PAGE -->
+<div class="container">
+<div id="page-employee" class="page active">
+
+  <h2>Weekly Timesheet</h2>
+  <p class="subtitle">Complete each day, get client sign-off, then submit.</p>
+
+  <!-- Details -->
+  <div class="card">
+    <div class="card-title">Details</div>
+    <div class="row">
+      <div>
+        <label>Employee Name</label>
+        <input type="text" id="emp-name" placeholder="Your full name">
+      </div>
+      <div>
+        <label>Client / Site</label>
+        <input type="text" id="client-name" placeholder="Client name">
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Week Starting (Monday)</label>
+        <input type="date" id="week-start" onchange="renderDays()">
+      </div>
+      <div>
+        <label>Purchase Order / Ref</label>
+        <input type="text" id="po-ref" placeholder="Optional">
+      </div>
+    </div>
+  </div>
+
+  <!-- Days -->
+  <div class="card">
+    <div class="card-title">Hours Worked</div>
+    <table class="days-table">
+      <thead>
+        <tr>
+          <th>Day</th>
+          <th>Start</th>
+          <th>Finish</th>
+          <th>Break (min)</th>
+          <th>Hours</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="days-body"></tbody>
+      <tfoot>
+        <tr class="total-row">
+          <td colspan="4" style="padding-left:4px; color:var(--mid); font-size:0.8rem; letter-spacing:0.06em; text-transform:uppercase;">Total</td>
+          <td class="total-hours" id="total-hours">0.0</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <!-- Client Signature -->
+  <div class="card">
+    <div class="card-title">Client Authorisation</div>
+    <div class="sig-block">
+      <p>By entering their name below, the client representative confirms the hours recorded above are correct and authorises Palm Crest Scheduling Solutions to invoice accordingly.</p>
+      <div class="row">
+        <div>
+          <label>Authorised By (print name)</label>
+          <input type="text" id="sig-name" placeholder="Client representative name">
+        </div>
+        <div>
+          <label>Position / Title</label>
+          <input type="text" id="sig-title" placeholder="e.g. Site Supervisor">
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>Date Signed</label>
+          <input type="date" id="sig-date">
+        </div>
+        <div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-outline" onclick="resetForm()">Clear</button>
+    <button class="btn btn-primary" onclick="submitTimesheet()">Submit Timesheet</button>
+  </div>
+
+</div>
+
+<!-- ADMIN PAGE -->
+<div id="page-admin" class="page">
+
+  <h2>Admin — Timesheet Records</h2>
+  <p class="subtitle">View submitted timesheets and generate PDF invoices.</p>
+
+  <div class="config-note">
+    <strong>Setup note:</strong> PDF generation emails are sent from the GAS backend. Configure the recipient email in <code>Code.gs</code> under <code>ADMIN_EMAIL</code>. To export a PDF, click <strong>Send PDF</strong> on any record below.
+  </div>
+
+  <div class="filter-row">
+    <div>
+      <label>Week Starting</label>
+      <input type="date" id="admin-week" onchange="loadRecords()">
+    </div>
+    <div>
+      <label>Employee</label>
+      <input type="text" id="admin-emp" placeholder="Filter by name" oninput="filterRecords()">
+    </div>
+    <button class="btn btn-primary" onclick="loadRecords()" style="white-space:nowrap; margin-bottom:0">Load Records</button>
+  </div>
+
+  <div id="records-list" class="records-list">
+    <div class="empty-state">Select a week and click Load Records.</div>
+  </div>
+
+</div>
+</div><!-- /container -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── Week helpers ─────────────────────────────────────────────────────────────
+
+function getMonday(d) {
+  const dt = new Date(d);
+  const day = dt.getDay();
+  const diff = (day === 0 ? -6 : 1 - day);
+  dt.setDate(dt.getDate() + diff);
+  return dt;
+}
+
+function toDateStr(d) {
+  return d.toISOString().split('T')[0];
+}
+
+function formatDate(str) {
+  if (!str) return '';
+  const d = new Date(str + 'T00:00:00');
+  return d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+function renderDays() {
+  const weekStart = document.getElementById('week-start').value;
+  const base = weekStart ? new Date(weekStart + 'T00:00:00') : getMonday(new Date());
+  const tbody = document.getElementById('days-body');
+  tbody.innerHTML = '';
+
+  DAYS.forEach((day, i) => {
+    const date = new Date(base);
+    date.setDate(base.getDate() + i);
+    const dateStr = toDateStr(date);
+    const isWeekend = i >= 5;
+
+    const tr = document.createElement('tr');
+    tr.id = `row-${i}`;
+    tr.innerHTML = `
+      <td>
+        <div style="font-weight:600">${day}</div>
+        <div style="font-size:0.75rem;color:var(--mid)">${formatDate(dateStr)}</div>
+      </td>
+      <td><input type="time" id="start-${i}" ${isWeekend ? 'disabled' : ''} oninput="calcHours(${i})"></td>
+      <td><input type="time" id="end-${i}" ${isWeekend ? 'disabled' : ''} oninput="calcHours(${i})"></td>
+      <td><input type="text" class="break-input" id="break-${i}" value="${isWeekend ? '' : '30'}" ${isWeekend ? 'disabled' : ''} oninput="calcHours(${i})" style="width:70px"></td>
+      <td class="hours-cell" id="hrs-${i}">${isWeekend ? '—' : '0.0'}</td>
+      <td>
+        <div class="day-off-check">
+          <input type="checkbox" id="off-${i}" onchange="toggleDayOff(${i})"> Off
+        </div>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+  updateTotal();
+}
+
+function toggleDayOff(i) {
+  const off = document.getElementById(`off-${i}`).checked;
+  ['start','end','break'].forEach(f => {
+    const el = document.getElementById(`${f}-${i}`);
+    el.disabled = off;
+    if (off) el.value = '';
+  });
+  document.getElementById(`hrs-${i}`).textContent = off ? '—' : '0.0';
+  updateTotal();
+}
+
+function calcHours(i) {
+  const s = document.getElementById(`start-${i}`).value;
+  const e = document.getElementById(`end-${i}`).value;
+  const b = parseFloat(document.getElementById(`break-${i}`).value) || 0;
+  const cell = document.getElementById(`hrs-${i}`);
+  if (s && e) {
+    const [sh, sm] = s.split(':').map(Number);
+    const [eh, em] = e.split(':').map(Number);
+    let mins = (eh * 60 + em) - (sh * 60 + sm) - b;
+    if (mins < 0) mins += 24 * 60;
+    cell.textContent = (mins / 60).toFixed(1);
+  } else {
+    cell.textContent = '0.0';
+  }
+  updateTotal();
+}
+
+function updateTotal() {
+  let total = 0;
+  for (let i = 0; i < 7; i++) {
+    const cell = document.getElementById(`hrs-${i}`);
+    if (cell) {
+      const v = parseFloat(cell.textContent);
+      if (!isNaN(v)) total += v;
+    }
+  }
+  document.getElementById('total-hours').textContent = total.toFixed(1);
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+
+function initWeek() {
+  const mon = getMonday(new Date());
+  document.getElementById('week-start').value = toDateStr(mon);
+  document.getElementById('admin-week').value = toDateStr(mon);
+  document.getElementById('sig-date').value = toDateStr(new Date());
+  renderDays();
+}
+
+// ─── Submit ───────────────────────────────────────────────────────────────────
+
+async function submitTimesheet() {
+  const empName = document.getElementById('emp-name').value.trim();
+  const clientName = document.getElementById('client-name').value.trim();
+  const weekStart = document.getElementById('week-start').value;
+  const poRef = document.getElementById('po-ref').value.trim();
+  const sigName = document.getElementById('sig-name').value.trim();
+  const sigTitle = document.getElementById('sig-title').value.trim();
+  const sigDate = document.getElementById('sig-date').value;
+
+  if (!empName || !clientName || !weekStart || !sigName) {
+    showToast('Please fill in employee name, client, week, and client sign-off.', 'error');
+    return;
+  }
+
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const off = document.getElementById(`off-${i}`).checked;
+    days.push({
+      day: DAYS[i],
+      start: off ? '' : (document.getElementById(`start-${i}`).value || ''),
+      end: off ? '' : (document.getElementById(`end-${i}`).value || ''),
+      breakMins: off ? 0 : (parseFloat(document.getElementById(`break-${i}`).value) || 0),
+      hours: off ? 0 : (parseFloat(document.getElementById(`hrs-${i}`).textContent) || 0),
+      dayOff: off
+    });
+  }
+
+  const totalHours = parseFloat(document.getElementById('total-hours').textContent);
+
+  const payload = {
+    action: 'submitTimesheet',
+    empName, clientName, weekStart, poRef,
+    sigName, sigTitle, sigDate,
+    totalHours, days
+  };
+
+  const btn = document.querySelector('.btn-primary');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Submitting…';
+
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast('Timesheet submitted successfully.', 'success');
+      resetForm();
+    } else {
+      showToast(data.error || 'Submission failed. Please try again.', 'error');
+    }
+  } catch (e) {
+    showToast('Could not reach server. Check your connection.', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Submit Timesheet';
+  }
+}
+
+// ─── Admin ────────────────────────────────────────────────────────────────────
+
+let allRecords = [];
+
+function adminAccess() {
+  const pin = prompt('Enter admin PIN:');
+  if (pin === ADMIN_PIN) {
+    showPage('admin');
+  } else if (pin !== null) {
+    showToast('Incorrect PIN.', 'error');
+  }
+}
+
+async function loadRecords() {
+  const week = document.getElementById('admin-week').value;
+  if (!week) { showToast('Select a week first.', 'error'); return; }
+
+  document.getElementById('records-list').innerHTML = '<div class="empty-state"><span class="spinner"></span>Loading…</div>';
+
+  try {
+    const url = `${GAS_URL}?action=getRecords&weekStart=${week}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.success) {
+      allRecords = data.records || [];
+      renderRecords(allRecords);
+    } else {
+      showToast(data.error || 'Failed to load records.', 'error');
+      document.getElementById('records-list').innerHTML = '<div class="empty-state">Failed to load records.</div>';
+    }
+  } catch (e) {
+    showToast('Could not reach server.', 'error');
+    document.getElementById('records-list').innerHTML = '<div class="empty-state">Server error.</div>';
+  }
+}
+
+function filterRecords() {
+  const q = document.getElementById('admin-emp').value.toLowerCase();
+  const filtered = q ? allRecords.filter(r => r.empName.toLowerCase().includes(q)) : allRecords;
+  renderRecords(filtered);
+}
+
+function renderRecords(records) {
+  const list = document.getElementById('records-list');
+  if (!records.length) {
+    list.innerHTML = '<div class="empty-state">No records found for this week.</div>';
+    return;
+  }
+  list.innerHTML = records.map((r, idx) => `
+    <div class="record-card">
+      <div class="record-info">
+        <strong>${r.empName}</strong>
+        <span>${r.clientName}${r.poRef ? ' · ' + r.poRef : ''}</span>
+        <span style="display:block; margin-top:4px; font-size:0.75rem;">Signed by: ${r.sigName}${r.sigTitle ? ', ' + r.sigTitle : ''} · ${formatDate(r.sigDate)}</span>
+      </div>
+      <div class="record-hours">
+        ${parseFloat(r.totalHours).toFixed(1)}
+        <small>hrs</small>
+      </div>
+      <button class="btn btn-danger" onclick="sendPDF(${idx})">Send PDF</button>
+    </div>
+  `).join('');
+}
+
+async function sendPDF(idx) {
+  const r = allRecords[idx];
+  const btn = document.querySelectorAll('.btn-danger')[idx];
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'sendPDF', rowId: r.rowId })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(`PDF emailed for ${r.empName}.`, 'success');
+    } else {
+      showToast(data.error || 'Failed to send PDF.', 'error');
+    }
+  } catch (e) {
+    showToast('Server error.', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Send PDF';
+  }
+}
+
+// ─── UI helpers ───────────────────────────────────────────────────────────────
+
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(`page-${id}`).classList.add('active');
+  document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+  document.getElementById(`nav-${id}`).classList.add('active');
+}
+
+function resetForm() {
+  ['emp-name','client-name','po-ref','sig-name','sig-title'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  const mon = getMonday(new Date());
+  document.getElementById('week-start').value = toDateStr(mon);
+  document.getElementById('sig-date').value = toDateStr(new Date());
+  renderDays();
+}
+
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+// ─── Start ────────────────────────────────────────────────────────────────────
+initWeek();
+</script>
+</body>
+</html>
