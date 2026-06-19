@@ -196,6 +196,20 @@
 
   .day-off-check input { width: auto; }
 
+  .copy-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--mid);
+    font-family: var(--font);
+    font-size: 0.68rem;
+    padding: 2px 6px;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+    white-space: nowrap;
+  }
+  .copy-btn:hover { border-color: var(--gold); color: var(--gold); }
+
   .total-row {
     background: var(--offwhite);
     border-radius: 4px;
@@ -554,6 +568,10 @@ function renderDays() {
     const dateStr = toDateStr(date);
     const isWeekend = i >= 5;
 
+    const defaultStart = isWeekend ? '' : '06:00';
+    const defaultEnd   = isWeekend ? '' : '18:00';
+    const showCopy = i >= 1 && !isWeekend;
+
     const tr = document.createElement('tr');
     tr.id = `row-${i}`;
     tr.innerHTML = `
@@ -561,18 +579,35 @@ function renderDays() {
         <div style="font-weight:600">${day}</div>
         <div style="font-size:0.75rem;color:var(--mid)">${formatDate(dateStr)}</div>
       </td>
-      <td><input type="time" id="start-${i}" ${isWeekend ? 'disabled' : ''} oninput="calcHours(${i})"></td>
-      <td><input type="time" id="end-${i}" ${isWeekend ? 'disabled' : ''} oninput="calcHours(${i})"></td>
-      <td class="hours-cell" id="hrs-${i}">${isWeekend ? '—' : '0.0'}</td>
+      <td><input type="time" id="start-${i}" value="${defaultStart}" ${isWeekend ? 'disabled' : ''} oninput="calcHours(${i})"></td>
+      <td><input type="time" id="end-${i}" value="${defaultEnd}" ${isWeekend ? 'disabled' : ''} oninput="calcHours(${i})"></td>
+      <td class="hours-cell" id="hrs-${i}">${isWeekend ? '—' : '12.0'}</td>
       <td>
-        <div class="day-off-check">
-          <input type="checkbox" id="off-${i}" onchange="toggleDayOff(${i})"> Off
+        <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-start">
+          <div class="day-off-check">
+            <input type="checkbox" id="off-${i}" onchange="toggleDayOff(${i})"> Off
+          </div>
+          ${showCopy ? `<button type="button" class="copy-btn" onclick="copyPrevDay(${i})" title="Copy times from previous day">↑ Copy</button>` : ''}
         </div>
       </td>
     `;
     tbody.appendChild(tr);
   });
-  updateTotal();
+  // Recalculate hours for pre-filled weekdays
+  for (let j = 0; j < 5; j++) calcHours(j);
+}
+
+function copyPrevDay(i) {
+  // Find previous non-off weekday
+  let prev = i - 1;
+  while (prev >= 0 && document.getElementById(`off-${prev}`).checked) prev--;
+  if (prev < 0) return;
+  const ps = document.getElementById(`start-${prev}`).value;
+  const pe = document.getElementById(`end-${prev}`).value;
+  if (!ps && !pe) { showToast('Previous day has no times to copy.', 'error'); return; }
+  document.getElementById(`start-${i}`).value = ps;
+  document.getElementById(`end-${i}`).value = pe;
+  calcHours(i);
 }
 
 function toggleDayOff(i) {
