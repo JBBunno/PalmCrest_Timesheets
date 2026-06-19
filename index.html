@@ -402,7 +402,7 @@
 
 <!-- CONFIG: update this URL after deploying GAS -->
 <script>
-  const GAS_URL = 'https://script.google.com/macros/s/AKfycbze2FGvqJ4YQUM2pDPrqiOCF19mkRtIDIyopMn6urz_BY80jbagrB0V_Jz9EVD3hz9sdA/exec';
+  const GAS_URL = 'https://script.google.com/macros/library/d/1Sh_LBEQjD8cK0ODrQIEBBUWSR6HwiIE4YKL8vuSgRKNtLEQhuai_X3JX/9';
   const ADMIN_PIN = '1234'; // change this
 </script>
 
@@ -550,7 +550,14 @@ function toDateStr(d) {
 
 function formatDate(str) {
   if (!str) return '';
-  const d = new Date(str + 'T00:00:00');
+  // Handle yyyy-MM-dd, Date objects, or other formats
+  let d;
+  if (typeof str === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(str)) {
+    d = new Date(str + 'T00:00:00');
+  } else {
+    d = new Date(str);
+  }
+  if (isNaN(d.getTime())) return str;
   return d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
