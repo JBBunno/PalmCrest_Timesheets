@@ -701,11 +701,7 @@ async function submitTimesheet() {
   btn.innerHTML = '<span class="spinner"></span>Submitting…';
 
   try {
-    const res = await fetch(GAS_URL, {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    });
-    const data = await res.json();
+    const data = await gasPost(payload);
     if (data.success) {
       showToast('Timesheet submitted successfully.', 'success');
       resetForm();
@@ -718,6 +714,15 @@ async function submitTimesheet() {
     btn.disabled = false;
     btn.textContent = 'Submit Timesheet';
   }
+}
+
+// ─── GAS fetch helper (avoids CORS preflight) ────────────────────────────────
+
+async function gasPost(payload) {
+  const form = new FormData();
+  form.append('data', JSON.stringify(payload));
+  const res = await fetch(GAS_URL, { method: 'POST', body: form });
+  return await res.json();
 }
 
 // ─── Admin ────────────────────────────────────────────────────────────────────
@@ -791,11 +796,7 @@ async function sendPDF(idx) {
   btn.textContent = 'Sending…';
 
   try {
-    const res = await fetch(GAS_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'sendPDF', rowId: r.rowId })
-    });
-    const data = await res.json();
+    const data = await gasPost({ action: 'sendPDF', rowId: r.rowId });
     if (data.success) {
       showToast(`PDF emailed for ${r.empName}.`, 'success');
     } else {
