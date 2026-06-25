@@ -384,6 +384,49 @@
     font-size: 0.8rem;
   }
 
+  /* Mode toggle */
+  .mode-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .mode-btn {
+    background: var(--white);
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-family: var(--font);
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--mid);
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .mode-btn.active {
+    border-color: var(--gold);
+    color: var(--navy);
+    background: #fffbf2;
+  }
+
+  .mode-btn:hover:not(.active) {
+    border-color: var(--navy);
+    color: var(--navy);
+  }
+
+  .mode-desc {
+    font-size: 0.72rem;
+    font-weight: 400;
+    color: var(--mid);
+  }
+
+  .mode-btn.active .mode-desc { color: var(--gold); }
+
   @media (max-width: 560px) {
     .row { grid-template-columns: 1fr; }
     .row.triple { grid-template-columns: 1fr 1fr; }
@@ -403,7 +446,7 @@
 <!-- CONFIG: update this URL after deploying GAS -->
 <script>
   const GAS_URL = 'https://script.google.com/macros/s/AKfycbze2FGvqJ4YQUM2pDPrqiOCF19mkRtIDIyopMn6urz_BY80jbagrB0V_Jz9EVD3hz9sdA/exec';
-  const ADMIN_PIN = '2626'; // change this
+  const ADMIN_PIN = '1234'; // change this
 </script>
 
 <header>
@@ -434,15 +477,52 @@
         <input type="text" id="client-name" placeholder="Client name">
       </div>
     </div>
-    <div class="row">
+    <!-- Mode toggle -->
+    <div class="row full" style="margin-bottom:8px">
       <div>
-        <label>Week Starting (Monday)</label>
+        <label>Timesheet Type</label>
+        <div class="mode-toggle">
+          <button type="button" id="mode-weekly" class="mode-btn active" onclick="setMode('weekly')">
+            📅 Weekly
+            <span class="mode-desc">Any start day · 7 days</span>
+          </button>
+          <button type="button" id="mode-range" class="mode-btn" onclick="setMode('range')">
+            📆 Date Range
+            <span class="mode-desc">Pick start &amp; end · up to 21 days</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Weekly date picker -->
+    <div class="row" id="date-weekly">
+      <div>
+        <label>Starting Date</label>
         <input type="date" id="week-start" onchange="renderDays()">
       </div>
       <div>
         <label>Purchase Order / Ref</label>
         <input type="text" id="po-ref" placeholder="Optional">
       </div>
+    </div>
+
+    <!-- Date range pickers -->
+    <div class="row" id="date-range" style="display:none">
+      <div>
+        <label>Start Date</label>
+        <input type="date" id="range-start" onchange="renderDays()">
+      </div>
+      <div>
+        <label>End Date</label>
+        <input type="date" id="range-end" onchange="renderDays()">
+      </div>
+    </div>
+    <div class="row" id="date-range-po" style="display:none">
+      <div>
+        <label>Purchase Order / Ref</label>
+        <input type="text" id="po-ref-range" placeholder="Optional">
+      </div>
+      <div></div>
     </div>
   </div>
 
@@ -565,29 +645,71 @@ function formatDate(str) {
   return d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const DAY_NAMES = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+let currentMode = 'weekly';
+let currentDayCount = 7;
+
+function setMode(mode) {
+  currentMode = mode;
+  document.getElementById('mode-weekly').classList.toggle('active', mode === 'weekly');
+  document.getElementById('mode-range').classList.toggle('active', mode === 'range');
+  document.getElementById('date-weekly').style.display  = mode === 'weekly' ? '' : 'none';
+  document.getElementById('date-range').style.display   = mode === 'range'  ? '' : 'none';
+  document.getElementById('date-range-po').style.display = mode === 'range' ? '' : 'none';
+  renderDays();
+}
+
+function getPORef() {
+  return currentMode === 'weekly'
+    ? document.getElementById('po-ref').value.trim()
+    : document.getElementById('po-ref-range').value.trim();
+}
 
 function renderDays() {
-  const weekStart = document.getElementById('week-start').value;
-  const base = weekStart ? new Date(weekStart + 'T00:00:00') : getMonday(new Date());
+  let dates = [];
+
+  if (currentMode === 'weekly') {
+    const val = document.getElementById('week-start').value;
+    if (!val) return;
+    const base = new Date(val + 'T00:00:00');
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(base);
+      d.setDate(base.getDate() + i);
+      dates.push(d);
+    }
+  } else {
+    const s = document.getElementById('range-start').value;
+    const e = document.getElementById('range-end').value;
+    if (!s || !e) return;
+    const start = new Date(s + 'T00:00:00');
+    const end   = new Date(e + 'T00:00:00');
+    if (end < start) { showToast('End date must be after start date.', 'error'); return; }
+    const diffDays = Math.round((end - start) / 86400000) + 1;
+    if (diffDays > 21) { showToast('Date range cannot exceed 21 days.', 'error'); return; }
+    for (let i = 0; i < diffDays; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      dates.push(d);
+    }
+  }
+
+  currentDayCount = dates.length;
   const tbody = document.getElementById('days-body');
   tbody.innerHTML = '';
 
-  DAYS.forEach((day, i) => {
-    const date = new Date(base);
-    date.setDate(base.getDate() + i);
-    const dateStr = toDateStr(date);
-    const isWeekend = i >= 5;
-
+  dates.forEach((date, i) => {
+    const dayName   = DAY_NAMES[date.getDay() === 0 ? 6 : date.getDay() - 1];
+    const dateStr   = toDateStr(date);
+    const isWeekend = date.getDay() === 0 || date.getDay() === 6;
     const defaultStart = isWeekend ? '' : '06:00';
     const defaultEnd   = isWeekend ? '' : '18:00';
-    const showCopy = i >= 1 && !isWeekend;
+    const showCopy     = i >= 1;
 
     const tr = document.createElement('tr');
     tr.id = `row-${i}`;
     tr.innerHTML = `
       <td>
-        <div style="font-weight:600">${day}</div>
+        <div style="font-weight:600">${dayName}</div>
         <div style="font-size:0.75rem;color:var(--mid)">${formatDate(dateStr)}</div>
       </td>
       <td><input type="time" id="start-${i}" value="${defaultStart}" ${isWeekend ? 'disabled' : ''} oninput="calcHours(${i})" step="600"></td>
@@ -604,8 +726,9 @@ function renderDays() {
     `;
     tbody.appendChild(tr);
   });
-  // Recalculate hours for pre-filled weekdays
-  for (let j = 0; j < 5; j++) calcHours(j);
+
+  // Recalculate pre-filled days
+  for (let j = 0; j < currentDayCount; j++) calcHours(j);
 }
 
 function copyPrevDay(i) {
@@ -650,7 +773,7 @@ function calcHours(i) {
 
 function updateTotal() {
   let total = 0;
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < currentDayCount; i++) {
     const cell = document.getElementById(`hrs-${i}`);
     if (cell) {
       const v = parseFloat(cell.textContent);
@@ -663,34 +786,55 @@ function updateTotal() {
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
 function initWeek() {
-  const mon = getMonday(new Date());
-  document.getElementById('week-start').value = toDateStr(mon);
-  document.getElementById('admin-week').value = toDateStr(mon);
-  document.getElementById('sig-date').value = toDateStr(new Date());
+  const today = new Date();
+  const mon   = getMonday(today);
+  document.getElementById('week-start').value  = toDateStr(mon);
+  document.getElementById('range-start').value = toDateStr(mon);
+  document.getElementById('range-end').value   = toDateStr(new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 6));
+  document.getElementById('admin-week').value  = toDateStr(mon);
+  document.getElementById('sig-date').value    = toDateStr(today);
   renderDays();
 }
 
 // ─── Submit ───────────────────────────────────────────────────────────────────
 
 async function submitTimesheet() {
-  const empName = document.getElementById('emp-name').value.trim();
+  const empName    = document.getElementById('emp-name').value.trim();
   const clientName = document.getElementById('client-name').value.trim();
-  const weekStart = document.getElementById('week-start').value;
-  const poRef = document.getElementById('po-ref').value.trim();
-  const sigName = document.getElementById('sig-name').value.trim();
-  const sigTitle = document.getElementById('sig-title').value.trim();
-  const sigDate = document.getElementById('sig-date').value;
+  const poRef      = getPORef();
+  const sigName    = document.getElementById('sig-name').value.trim();
+  const sigTitle   = document.getElementById('sig-title').value.trim();
+  const sigDate    = document.getElementById('sig-date').value;
 
-  if (!empName || !clientName || !weekStart || !sigName) {
-    showToast('Please fill in employee name, client, week, and client sign-off.', 'error');
+  // Determine period start/end
+  let periodStart, periodEnd, periodLabel;
+  if (currentMode === 'weekly') {
+    periodStart = document.getElementById('week-start').value;
+    const endDate = new Date(periodStart + 'T00:00:00');
+    endDate.setDate(endDate.getDate() + 6);
+    periodEnd   = toDateStr(endDate);
+    periodLabel = 'weekly';
+  } else {
+    periodStart = document.getElementById('range-start').value;
+    periodEnd   = document.getElementById('range-end').value;
+    periodLabel = 'range';
+  }
+
+  if (!empName || !clientName || !periodStart || !sigName) {
+    showToast('Please fill in employee name, client, period dates, and client sign-off.', 'error');
     return;
   }
 
   const days = [];
-  for (let i = 0; i < 7; i++) {
-    const off = document.getElementById(`off-${i}`).checked;
+  for (let i = 0; i < currentDayCount; i++) {
+    const off     = document.getElementById(`off-${i}`).checked;
+    const dayCell = document.getElementById(`row-${i}`).querySelector('div');
+    const dayName = dayCell ? dayCell.textContent.trim() : '';
+    const dateDiv = document.getElementById(`row-${i}`).querySelectorAll('div')[1];
+    const dateLabel = dateDiv ? dateDiv.textContent.trim() : '';
     days.push({
-      day: DAYS[i],
+      day: dayName,
+      date: dateLabel,
       start: off ? '' : (document.getElementById(`start-${i}`).value || ''),
       end: off ? '' : (document.getElementById(`end-${i}`).value || ''),
       hours: off ? 0 : (parseFloat(document.getElementById(`hrs-${i}`).textContent) || 0),
@@ -702,7 +846,7 @@ async function submitTimesheet() {
 
   const payload = {
     action: 'submitTimesheet',
-    empName, clientName, weekStart, poRef,
+    empName, clientName, weekStart: periodStart, periodEnd, periodLabel, poRef,
     sigName, sigTitle, sigDate,
     totalHours, days
   };
@@ -831,12 +975,17 @@ function showPage(id) {
 }
 
 function resetForm() {
-  ['emp-name','client-name','po-ref','sig-name','sig-title'].forEach(id => {
-    document.getElementById(id).value = '';
+  ['emp-name','client-name','po-ref','po-ref-range','sig-name','sig-title'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
   });
   const mon = getMonday(new Date());
-  document.getElementById('week-start').value = toDateStr(mon);
-  document.getElementById('sig-date').value = toDateStr(new Date());
+  document.getElementById('week-start').value  = toDateStr(mon);
+  document.getElementById('range-start').value = toDateStr(mon);
+  const endOfWeek = new Date(mon);
+  endOfWeek.setDate(mon.getDate() + 6);
+  document.getElementById('range-end').value  = toDateStr(endOfWeek);
+  document.getElementById('sig-date').value   = toDateStr(new Date());
   renderDays();
 }
 
