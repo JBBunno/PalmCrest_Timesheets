@@ -707,6 +707,8 @@ function renderDays() {
 
     const tr = document.createElement('tr');
     tr.id = `row-${i}`;
+    tr.dataset.dayName  = dayName;
+    tr.dataset.dateStr  = formatDate(dateStr);
     tr.innerHTML = `
       <td>
         <div style="font-weight:600">${dayName}</div>
@@ -827,17 +829,14 @@ async function submitTimesheet() {
 
   const days = [];
   for (let i = 0; i < currentDayCount; i++) {
-    const off     = document.getElementById(`off-${i}`).checked;
-    const dayCell = document.getElementById(`row-${i}`).querySelector('div');
-    const dayName = dayCell ? dayCell.textContent.trim() : '';
-    const dateDiv = document.getElementById(`row-${i}`).querySelectorAll('div')[1];
-    const dateLabel = dateDiv ? dateDiv.textContent.trim() : '';
+    const off = document.getElementById(`off-${i}`).checked;
+    const row = document.getElementById(`row-${i}`);
     days.push({
-      day: dayName,
-      date: dateLabel,
+      day:   row.dataset.dayName  || '',
+      date:  row.dataset.dateStr  || '',
       start: off ? '' : (document.getElementById(`start-${i}`).value || ''),
-      end: off ? '' : (document.getElementById(`end-${i}`).value || ''),
-      hours: off ? 0 : (parseFloat(document.getElementById(`hrs-${i}`).textContent) || 0),
+      end:   off ? '' : (document.getElementById(`end-${i}`).value   || ''),
+      hours: off ? 0  : (parseFloat(document.getElementById(`hrs-${i}`).textContent) || 0),
       dayOff: off
     });
   }
